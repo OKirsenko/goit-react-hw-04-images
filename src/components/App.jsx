@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
 import Button from './Button/Button';
@@ -8,85 +8,75 @@ import Loader from './Loader/Loader';
 import Modal from './Modal/Modal';
 import s from './App.module.css';
 
-export default class App extends Component {
-  state = {
-    searchWord: '',
-    picFetch: [],
-    page: 1,
-    isLoading: false,
-    error: null,
-    showModal: false,
-    largeImageURL: '',
-  };
+export default function App() {
+  const [searchWord, setSearchWord] = useState('');
+  const [picFetch, setPicFetch] = useState([]);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.searchWord !== this.state.searchWord ||
-      prevState.page !== this.state.page
-    ) {
-      this.setPicFetch();
+  useEffect(() => {
+    if (!searchWord) {
+      return;
     }
-  }
-  setPicFetch = () => {
-    this.setState({ isLoading: true, error: null });
-    picturesApi(this.state.searchWord, this.state.page)
-      .then(picFetch =>
-        this.setState(prev => ({
-          picFetch: [...prev.picFetch, ...picFetch],
-        }))
-      )
-      .catch(error => this.setState({ error: error.message }))
-      .finally(() => this.setState({ isLoading: false }));
+    fetchPic();
+  }, [searchWord, page]);
+
+  const fetchPic = () => {
+    setIsLoading(true);
+    picturesApi(searchWord, page)
+      .then(pictures => setPicFetch([...picFetch, ...pictures]))
+      .catch(error => setError(error.message))
+      .finally(() => setIsLoading(false));
   };
-  handleOnSubmmit = searchWord => {
-    this.setState({ searchWord, page: 1, picFetch: [] });
+  const handleOnSubmmit = searchWord => {
+    setSearchWord(searchWord);
+    setPage(1);
+    setPicFetch([]);
   };
-  handlerLoadMore = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
+  const handlerLoadMore = () => {
+    setPage(page + 1);
   };
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
+  const toggleModal = () => {
+    setShowModal(!showModal);
   };
 
-  modalOpen = url => {
-    this.setState({ largeImageURL: url });
-    this.toggleModal();
+  const modalOpen = url => {
+    setLargeImageURL(url);
+    toggleModal();
   };
-  render() {
-    const { picFetch, isLoading, searchWord, error, showModal, largeImageURL } =
-      this.state;
-    return (
-      <>
-        <Searchbar onSubmit={this.handleOnSubmmit} />
-        {error ? (
-          <Error error={error} />
-        ) : (
-          <>
-            <ImageGallery picFetch={picFetch} modalOpen={this.modalOpen} />
-            {showModal && (
-              <Modal onClose={this.toggleModal}>
-                <img
-                  src={largeImageURL}
-                  className={s.modalImg}
-                  onClick={this.toggleModal}
-                  alt=""
-                />
-              </Modal>
-            )}
-            {isLoading ? (
-              <Loader />
-            ) : (
-              picFetch.length > 0 &&
-              searchWord &&
-              picFetch.length % 12 === 0 && (
-                <Button handleLoadMore={this.handlerLoadMore} />
-              )
-            )}
-          </>
-        )}
-      </>
-    );
-  }
+
+  return (
+    <>
+      <Searchbar onSubmit={handleOnSubmmit} />
+      {error ? (
+        <Error error={error} />
+      ) : (
+        <>
+          <ImageGallery picFetch={picFetch} modalOpen={modalOpen} />
+          {showModal && (
+            <Modal onClose={toggleModal}>
+              <img
+                src={largeImageURL}
+                className={s.modalImg}
+                onClick={toggleModal}
+                alt=""
+              />
+            </Modal>
+          )}
+          {isLoading ? (
+            <Loader />
+          ) : (
+            picFetch.length > 0 &&
+            searchWord &&
+            picFetch.length % 12 === 0 && (
+              <Button handleLoadMore={handlerLoadMore} />
+            )
+          )}
+        </>
+      )}
+    </>
+  );
 }
